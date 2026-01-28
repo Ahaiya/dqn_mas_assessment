@@ -1,0 +1,29 @@
+{
+  "project_info": "ASAP AES Dataset Metadata",
+  "score_ranges": {
+    "1": 12,
+    "2": 6,
+    "3": 3,
+    "4": 3,
+    "5": 4,
+    "6": 4,
+    "7": 30,
+    "8": 60
+  },
+  "prompts": {
+    "1": "Topic: Computers and Society. Write a letter to your local newspaper stating your opinion on the effects computers have on people.",
+    "2": "Topic: Censorship in Libraries. Do you believe that certain materials should be removed from shelves if found offensive?",
+    "3": "Topic: 'Rough Road Ahead'. Explain how the features of the setting affect the cyclist.",
+    "4": "Topic: 'Winter Hibiscus'. Explain why the author concludes the story with the hibiscus paragraph.",
+    "5": "Topic: 'Narciso Rodriguez'. Describe the mood created by the author in the memoir.",
+    "6": "Topic: 'The Mooring Mast'. Describe the obstacles the builders faced in allowing dirigibles to dock.",
+    "7": "Topic: Patience. Write a story about a time when you or someone you know was patient.",
+    "8": "Topic: Laughter. Tell a true story in which laughter was one element or part."
+  },
+  "source_texts": {
+    "3": "Title: ROUGH ROAD AHEAD: Do Not Exceed Posted Speed Limit\nAuthor: Joe Kurmaskie\nContent Summary: The author describes a cycling trip where he took a 'shortcut' suggested by some old locals. It turned out to be a grueling, hot, and waterless route through the desert. He suffered from dehydration and heat exhaustion.\nKey Quote: 'I rode into the morning with strong legs and a smile on my face... The road began to rise... The heat became a physical weight.'",
+    "4": "Title: Winter Hibiscus\nAuthor: Minfong Ho\nContent Summary: Saeng, a teenage girl from Vietnam, fails her driver's test. She feels discouraged. Later, she visits a florist and sees a hibiscus plant that reminds her of her home in Vietnam. The plant symbolizes resilience and hope.\nKey Quote: 'When the snows melt and the geese return and this hibiscus is budding, then I will take that test again.'",
+    "5": "Title: Narciso Rodriguez (Memoir)\nAuthor: Narciso Rodriguez\nContent Summary: The fashion designer describes his childhood home in Newark, New Jersey. His parents, originally from Cuba, created a warm, traditional home filled with Cuban music and cooking. He emphasizes that 'family' is about community and love, not just blood relations.",
+    "6": "Title: The Mooring Mast (Empire State Building)\nAuthor: Marcia Amidon Lüsted\nContent Summary: Describes the construction of the Empire State Building. To beat the Chrysler Building in height, Al Smith added a 'mooring mast' for dirigibles (airships) to the top. However, docking airships proved dangerous and impractical due to high winds and updrafts."
+  }
+}
