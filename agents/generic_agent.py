@@ -7,8 +7,6 @@ Generic Agent Implementation
 from typing import Optional
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.runnables import Runnable
-
-# 引入新的通用 Schema
 from core.schemas import AgentOutput, EvaluationSubject
 from config.model_factory import get_core_model
 
@@ -27,8 +25,7 @@ class GenericAgent:
         self.llm = get_core_model(temperature=temperature)
 
         # 2. 绑定结构化输出 (Schema)
-        # 注意: AgentOutput 现在是通用的，role 字段是 str 类型，可以兼容任何角色
-        self.structured_llm = self.llm.with_structured_output(AgentOutput)
+        self.structured_llm = self.llm.with_structured_output(AgentOutput)  # 强制 LLM 输出符合 AgentOutput 定义的 JSON 结构
 
         # 3. 构建 Prompt
         # input_data 将填入 EvaluationSubject.to_markdown_context() 的结果
@@ -43,35 +40,40 @@ class GenericAgent:
     def run(self, subject: EvaluationSubject, previous_reviews: Optional[list] = None) -> AgentOutput:
         """
         执行评估
-        :param subject: 泛化的待评主体 (原 StudentSubmission)
+        :param subject: 泛化的待评主体
         :param previous_reviews: (可选) 上一轮辩论历史
         """
-        print(f"🤖 [{self.role_name}] 正在评估 {subject.subject_id} ...")
+        print(f" [{self.role_name}] 正在评估 {subject.subject_id} ...")
 
-        # 1. 准备上下文
+        # 1. 准备上下文 (Markdown 格式)
         context_str = subject.to_markdown_context()
 
         # 2. (可选) 注入辩论历史
-        # 如果有 previous_reviews，我们需要将其拼接到 input_data 或 system prompt 中
-        # 这里简化处理：直接拼接到用户输入的开头
+        # 如果有 previous_reviews，将其拼接到用户输入的开头，作为“上下文线索”
         if previous_reviews:
             history_text = self._format_history(previous_reviews)
             final_input = f"【上一轮专家组意见 (请仔细阅读并反思)】\n{history_text}\n\n{context_str}"
         else:
             final_input = context_str
 
-        # 3. 执行调用
-        result = self.chain.invoke({"input_data": final_input})
 
-        # 4. 强制修正角色名 (保持数据一致性)
+        # 3. 执行调用
+        try:
+            result = self.chain.invoke({"input_data": final_input})
+        except Exception as e:
+            print(f"❌ Agent {self.role_name} failed: {e}")
+            raise e
+
+        # 4. 强制修正角色名 (保持数据一致性，防止 LLM 幻觉篡改角色名)
         if result.role != self.role_name:
             result.role = self.role_name
 
         return result
 
     def _format_history(self, reviews) -> str:
-        """简单的历史格式化"""
+        """格式化历史评价，供当前 Agent 参考"""
         text = ""
         for r in reviews:
-            text += f"> {r.role}: {r.overall_score}分 | {r.thought_process[:50]}...\n"
+            thought_snippet = r.thought_process[:300] + ("..." if len(r.thought_process) > 300 else "")
+            text += f"> 【{r.role}】打分: {r.overall_score}\n  观点摘要: {thought_snippet}\n"
         return text

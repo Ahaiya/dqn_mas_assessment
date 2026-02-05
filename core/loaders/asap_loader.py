@@ -12,6 +12,7 @@ import os
 import json
 from typing import List, Tuple, Dict, Any
 from core.schemas import EvaluationSubject, AssessmentArtifact, ArtifactType
+from config.loader import global_config
 
 
 class ASAPLoader:
@@ -27,6 +28,8 @@ class ASAPLoader:
 
         # 缓存配置数据
         self.context_data: Dict[str, Any] = {}
+        #  从全局配置读取目标分值范围 (默认 5.0)
+        self.target_max_score = float(global_config.get("global_settings", {}).get("score_range", [0, 5])[1])
         self._load_metadata()
 
     def _load_metadata(self):
@@ -36,23 +39,23 @@ class ASAPLoader:
 
         with open(self.metadata_path, 'r', encoding='utf-8') as f:
             self.context_data = json.load(f)
-        print(f"✅ Metadata loaded from {os.path.basename(self.metadata_path)}")
+        print(f" Metadata loaded from {os.path.basename(self.metadata_path)}")
 
     def load_dataset(self):
-        """加载 TSV 数据集"""
+        """加载训练数据集"""
         if not os.path.exists(self.tsv_path):
             raise FileNotFoundError(f"❌ 数据集缺失: {self.tsv_path}")
 
-        print(f"📂 Loading ASAP dataset from {self.tsv_path}...")
+        print(f" Loading ASAP dataset from {self.tsv_path}...")
         try:
             # ASAP 数据集通常是 ISO-8859-1 编码
             self.df = pd.read_csv(self.tsv_path, sep='\t', encoding='ISO-8859-1')
             # 过滤掉没有 domain1_score 的行
             self.df = self.df.dropna(subset=['domain1_score'])
-            print(f"✅ Loaded {len(self.df)} essays.")
+            print(f" Loaded {len(self.df)} essays.")
         except Exception as e:
-            print(f"❌ Read Error: {e}")
-            self.df = pd.DataFrame()
+            print(f"❌ Critical Read Error: {e}")
+            raise e
 
     def get_split_indices(self, split: str = 'train', seed: int = 42) -> List[int]:
         """获取切分索引 (80/20 split)"""
@@ -89,22 +92,22 @@ class ASAPLoader:
         essay_text = str(row['essay'])
         essay_id = str(row['essay_id'])
 
-        # 1. 从 JSON 配置中获取参数
-        # 满分范围
+        # 1. 从 JSON 配置中获取该 Set 的满分
         score_ranges = self.context_data.get("score_ranges", {})
-        max_score = score_ranges.get(set_id_str, 10)
+        max_score = score_ranges.get(set_id_str, 10)    # 如果 JSON 里没配，默认给 10 分防止除零，但最好配全
 
-        # 题目背景
+        ## 题目背景
         prompts = self.context_data.get("prompts", {})
         prompt_text = prompts.get(set_id_str, "Unknown Topic")
 
-        # 阅读原文 (仅部分 Set 有)
+        ## 阅读原文 (仅部分 Set 有)
         source_texts = self.context_data.get("source_texts", {})
         source_text = source_texts.get(set_id_str, None)
 
-        # 2. 分数归一化 (0-5)
-        norm_score = (raw_score / max_score) * 5.0
-        norm_score = max(0.0, min(5.0, norm_score))
+        # 2. 分数归一化 (使用全局配置的 target_max_score)
+        ## 公式: (原始分 / 卷面满分) * 目标满分(5.0)
+        norm_score = (raw_score / max_score) * self.target_max_score
+        norm_score = max(0.0, min(self.target_max_score, norm_score))
 
         # 3. 构建对象
         subject = EvaluationSubject(

@@ -1,10 +1,43 @@
-# config/mas_config.yaml
+# config/config.yaml
 # ASAP Essay Scoring System Configuration
 
 project_name: "ASAP_AES_Evaluator"
 
 # ==========================================
-# 1. 角色定义 (Agents Definition)
+# 1. 运行模式设置
+# ==========================================
+# 模式选择: "production" (真实LLM) 或 "mock_training" (模拟器)
+run_mode: "mock_training"
+
+# 模拟器参数 (仅在 mock_training 下生效)
+simulation:
+  convergence_rate: 0.8  # 有效辩论概率 (向GT靠拢)
+  noise_level: 1.0       # 噪声标准差
+  convergence_speed: 0.5 # 收敛速度 (0.5 = 距离减半)
+
+# ==========================================
+# 2. 训练超参数
+# ==========================================
+training:
+  total_episodes: 1000
+  warmup_steps: 50
+  batch_size: 32
+  learning_rate: 0.001
+  gamma: 0.95
+  epsilon_start: 1.0
+  epsilon_end: 0.05
+  epsilon_decay: 300
+  buffer_size: 10000
+
+# ==========================================
+# 3. 全局设置
+# ==========================================
+global_settings:
+  max_rounds: 6
+  score_range: [0, 5]
+
+# ==========================================
+# 4. 角色定义 (Agents)
 # ==========================================
 agents:
   - name: "Content_Expert"
@@ -54,10 +87,3 @@ agents:
       {rubric_content}
       
       请重点关注量规中的：Conventions, Grammar, Mechanics, Word Choice, Spelling。
-
-# ==========================================
-# 2. 全局参数
-# ==========================================
-global_settings:
-  max_rounds: 6
-  score_range: [0, 5]  # 系统内部标准分范围
