@@ -35,11 +35,18 @@ def dqn_decision_node(state: dict):
     except:
         q_values = [0.0, 0.0]
 
+    # 控制输出
+    # 显示：当前专家分歧度 (Var) -> 提交收益 (Q0) vs 辩论收益 (Q1) -> 最终决定
+    decision_str = ["Submit", "Debate"][action]
+    print(f"   DQN Decision | Round {current_round} | Var: {state_list[1]:.3f} | "
+          f"Q_Submit: {q_values[0]:.3f} vs Q_Debate: {q_values[1]:.3f} "
+          f"--> 🟢 {decision_str}")
+
     debug_info = {
         "State_Var": round(state_list[1], 4),
         "Q_Submit": round(q_values[0], 3),
         "Q_Debate": round(q_values[1], 3),
-        "Decision": ["Submit", "Debate"][action]
+        "Decision": decision_str
     }
 
     return {

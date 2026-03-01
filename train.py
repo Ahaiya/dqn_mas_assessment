@@ -8,6 +8,7 @@ import numpy as np
 import pandas as pd
 import math
 import torch
+import time
 from datetime import datetime
 from langchain_core.runnables import RunnableConfig
 
@@ -56,14 +57,25 @@ def calculate_reward(final_state, ground_truth_score):
     error = abs(pred_score - ground_truth_score)
     # 3. 准确性奖励 (满分 1.0)
     ## 奖励: 误差越小越好。满分 1.0。
-    # 策略: error=0 -> 1.0; error=1 -> 0.6; error>=2.5 -> 0
-    acc_reward = max(0, 1.0 - (error * 0.4))
+    # # 旧策略: error=0 -> 1.0; error=1 -> 0.6; error>=2.5 -> 0
+    # acc_reward = max(0, 1.0 - (error * 0.4))
+
+    # 新策略：使用指数奖励，对低误差极其敏感
+    # Error=0.5 -> Reward=0.6
+    # Error=0.1 -> Reward=0.9
+    # Error=0.0 -> Reward=1.0 + 0.5 (Jackpot!)
+    acc_reward = math.exp(-1.0 * error)  # 基础分
+    # 额外设置一个“中大奖”机制，只有误差小于 0.2 才给
+    if error < 0.2:
+        acc_reward += 0.5
 
     # 4. 效率惩罚 (每多一轮扣 0.05)
     rounds = final_state.get("current_round", 1)
     actual_rounds = max(1, rounds - 1)
 
-    eff_penalty = 0.05 * (actual_rounds - 1)
+    # 减少辩论效率惩罚： 0.05 -> 0.01
+    # 建议: 如果只有 3 轮，可以设为 0.02 ~ 0.03
+    eff_penalty = 0.03 * (actual_rounds - 1)
 
     total = acc_reward - eff_penalty
     return total, pred_score
@@ -119,11 +131,18 @@ def train():
     metrics_log = []
 
     for i in range(start_episode, CONF["total_episodes"]):
+        episode_start_time = time.time()  # 计时开始
         epsilon = get_epsilon(i)
 
-        # A. 随机采样一个样本 (Essay)
-        idx = np.random.choice(train_indices)
-        subject, gt_score = loader.get_subject_by_index(idx)
+        # A. 随机采样一个样本 (Essay)， “production”下打印标题
+        if RUN_MODE == "production":
+            idx = np.random.choice(train_indices)
+            subject, gt_score = loader.get_subject_by_index(idx)
+            print(f"\n Episode {i + 1} Start | Subject: {subject.subject_id} | GT: {gt_score}")
+        else:
+            idx = np.random.choice(train_indices)
+            subject, gt_score = loader.get_subject_by_index(idx)
+
 
         # B. 初始化图状态
         state = {
@@ -161,15 +180,18 @@ def train():
 
             # 更新网络 (仅在 Buffer 足够且过预热期后)
             loss = None
-            # if i > CONF["warmup_steps"]:
-            #     loss = global_dqn_agent.update_policy(batch_size=CONF["batch_size"])
-            loss = global_dqn_agent.update_policy(batch_size=CONF["batch_size"])
+            if i > CONF["warmup_steps"]:
+                loss = global_dqn_agent.update_policy(batch_size=CONF["batch_size"])
 
-            # 打印日志 (每 10 轮)
-            if (i + 1) % 10 == 0:
-                print(f"Ep {i + 1:04d} | Eps: {epsilon:.2f} | Rds: {final_state['current_round']} | "
+            # 计算耗时
+            duration = time.time() - episode_start_time
+
+            # 日志打印逻辑：如果是 Production 模式，或者 Mock 模式每 10 轮，都打印
+            if RUN_MODE == "production" or (i + 1) % 10 == 0:
+                print(f" Ep {i + 1} End | Time: {duration:.1f}s | Rds: {final_state['current_round'] - 1} | "
                       f"GT: {gt_score:.1f} vs Pred: {pred_score:.1f} | Rw: {reward:.3f} | Loss: {loss}")
-                # 🌟 定期保存 Checkpoint
+
+                # 实时保存 Checkpoint
                 save_checkpoint(i, global_dqn_agent)
 
             metrics_log.append({

@@ -82,8 +82,8 @@ class ScoreItem(BaseModel):
     """评分项"""
     indicator: str = Field(..., description="指标名称/代码 (e.g. Grammar, Logic)")
     score: float = Field(..., description="得分")
-    evidence: str = Field(..., description="原文证据")
-    comment: str = Field(..., description="评价理由")
+    evidence: Optional[str] = Field(default=None, description="支持该评分的原文证据")
+    comment: Optional[str] = Field(default=None, description="评语或改进建议")
 
 
 class AgentOutput(BaseModel):

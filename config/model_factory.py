@@ -18,7 +18,7 @@ def get_core_model(temperature: float = 1.0):
     base_url = os.getenv("DEEPSEEK_API_BASE", None)
 
     # 2. 统一初始化
-    print(f" ModelFactory: Loading {model_name} ...")
+    # print(f" ModelFactory: Loading {model_name} ...")
 
     if base_url:
         model = init_chat_model(

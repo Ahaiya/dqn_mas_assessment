@@ -51,8 +51,8 @@ class AgentFactory:
         if run_mode == "mock_training":
             return [self.get_agent_by_name(name, set_id) for name in agent_names]
 
-        # # 生产模式逻辑：读取量规 -> 注入 Prompt -> 创建实例
-        print(f" Factory: 正在为 Set {set_id} 初始化专家组...")
+        # 生产模式逻辑：读取量规 -> 注入 Prompt -> 创建实例
+        # print(f" Factory: 正在为 Set {set_id} 初始化专家组...")
         rubric_content = self._load_rubric_content(set_id)
         created_agents = []
 

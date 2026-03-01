@@ -1,8 +1,6 @@
 """
 Generic Agent Implementation
 ============================
-万能评估代理。
-它不再硬编码角色 (Architect/Strategist)，而是根据传入的配置动态扮演角色。
 """
 from typing import Optional
 from langchain_core.prompts import ChatPromptTemplate
@@ -14,7 +12,6 @@ from config.model_factory import get_core_model
 class GenericAgent:
     def __init__(self, role_name: str, system_prompt: str, temperature: float = 0.0):
         """
-        初始化万能代理
         :param role_name: 角色名称 (e.g. "Content_Expert")
         :param system_prompt: 已经注入了量规的完整 System Prompt
         :param temperature: 模型温度
@@ -43,7 +40,11 @@ class GenericAgent:
         :param subject: 泛化的待评主体
         :param previous_reviews: (可选) 上一轮辩论历史
         """
-        print(f" [{self.role_name}] 正在评估 {subject.subject_id} ...")
+        # 0.控制输出
+        ## 计算当前轮次 (假设每轮3个专家)
+        round_idx = (len(previous_reviews) // 3) + 1 if previous_reviews else 1
+        ## 打印开始信号 (使用 \r 可以在同一行覆盖，或者直接用简单的 print)
+        print(f"  [Round_{round_idx}] {self.role_name} 正在思考...", end="\r", flush=True)
 
         # 1. 准备上下文 (Markdown 格式)
         context_str = subject.to_markdown_context()
@@ -56,18 +57,37 @@ class GenericAgent:
         else:
             final_input = context_str
 
-
         # 3. 执行调用
         try:
             result = self.chain.invoke({"input_data": final_input})
+
+            # 🌟 [关键修复] 检查是否为 None
+            if result is None:
+                raise ValueError(f"Agent {self.role_name} returned None (JSON parsing failed or empty response)")
+
         except Exception as e:
-            print(f"❌ Agent {self.role_name} failed: {e}")
+            # 打印错误并向上抛出，train.py 的循环会捕获它并跳过当前 Episode
+            print(f"\n❌ Agent {self.role_name} failed: {e}")
             raise e
 
         # 4. 强制修正角色名 (保持数据一致性，防止 LLM 幻觉篡改角色名)
         if result.role != self.role_name:
             result.role = self.role_name
 
+        # 🌟 分数归一化（防御性措施）
+        # 获取该 Set 的原始满分 (e.g., Set 1 是 12, Set 6 是 4)
+        raw_max = subject.metadata.get("raw_max_score", 0)
+
+        # 只有当 raw_max 存在且不为 0 时才尝试修正
+        if raw_max > 0:
+            # 原则：信任 Prompt，只做防御性措施
+            if result.overall_score > 5.0:
+                result.overall_score = (result.overall_score / raw_max) * 5.0
+        # 最后的最后，确保分数在 0-5 之间
+        result.overall_score = max(0.0, min(5.0, result.overall_score))
+
+        # 打印关键结果：角色、分数、置信度
+        print(f"  ✅ [Round_{round_idx}] {self.role_name.ljust(16)}: 评分 {result.overall_score:<4} (Conf: {result.confidence})")
         return result
 
     def _format_history(self, reviews) -> str:

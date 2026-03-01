@@ -7,7 +7,7 @@ project_name: "ASAP_AES_Evaluator"
 # 1. 运行模式设置
 # ==========================================
 # 模式选择: "production" (真实LLM) 或 "mock_training" (模拟器)
-run_mode: "mock_training"
+run_mode: "production"
 
 # 模拟器参数 (仅在 mock_training 下生效)
 simulation:
@@ -18,22 +18,35 @@ simulation:
 # ==========================================
 # 2. 训练超参数
 # ==========================================
+# "mock_training" mode
+#training:
+#  total_episodes: 10000
+#  warmup_steps: 200
+#  batch_size: 64
+#  learning_rate: 0.001
+#  gamma: 0.95
+#  epsilon_start: 1.0
+#  epsilon_end: 0.05
+#  epsilon_decay: 1500
+#  buffer_size: 50000
+
+# "production" mode
 training:
-  total_episodes: 1000
-  warmup_steps: 50
-  batch_size: 32
-  learning_rate: 0.001
+  total_episodes: 10040 # 累加的结果，原先结束的时候是 10028
+  warmup_steps: 0
+  batch_size: 8
+  learning_rate: 0.0001
   gamma: 0.95
-  epsilon_start: 1.0
-  epsilon_end: 0.05
-  epsilon_decay: 300
-  buffer_size: 10000
+  epsilon_start: 0.1
+  epsilon_end: 0.01
+  epsilon_decay: 100
+  buffer_size: 1000
 
 # ==========================================
 # 3. 全局设置
 # ==========================================
 global_settings:
-  max_rounds: 6
+  max_rounds: 3 # 在真实LLM 下建议设置为 3
   score_range: [0, 5]
 
 # ==========================================
@@ -56,7 +69,11 @@ agents:
       【评分标准】
       {rubric_content}
       
-      请重点关注量规中的：Idea Development, Organization, Topic Adherence, Evidence Accuracy。
+      【⚠️ 核心指令：分数换算】
+      **重要：** 请务必基于上述量规进行评分。
+      **但是：** 最终输出的 `overall_score` 必须**换算为 0-5 分制**。
+      公式：(你的原始评分 / 量规满分) * 5.0
+      例如：如果量规满分是 4 分，你评定为 3 分，请输出 3.75 分。
 
   - name: "Structure_Expert"
     description: "结构与修辞专家。关注段落组织、过渡衔接和整体流畅度。"
@@ -71,7 +88,11 @@ agents:
       【评分标准】
       {rubric_content}
       
-      请重点关注量规中的：Organization, Cohesion, Sentence Fluency, Paragraphing。
+      【⚠️ 核心指令：分数换算】
+      **重要：** 请务必基于上述量规进行评分。
+      **但是：** 最终输出的 `overall_score` 必须**换算为 0-5 分制**。
+      公式：(你的原始评分 / 量规满分) * 5.0
+      例如：如果量规满分是 4 分，你评定为 3 分，请输出 3.75 分。
 
   - name: "Language_Expert"
     description: "语言规范专家。关注语法、拼写、标点和词汇。"
@@ -85,5 +106,9 @@ agents:
       
       【评分标准】
       {rubric_content}
-      
-      请重点关注量规中的：Conventions, Grammar, Mechanics, Word Choice, Spelling。
+
+      【⚠️ 核心指令：分数换算】
+      **重要：** 请务必基于上述量规进行评分。
+      **但是：** 最终输出的 `overall_score` 必须**换算为 0-5 分制**。
+      公式：(你的原始评分 / 量规满分) * 5.0
+      例如：如果量规满分是 4 分，你评定为 3 分，请输出 3.75 分。
